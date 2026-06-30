@@ -1,0 +1,57 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-12-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# ======================================================
+# IHC Concordance Analysis (Kappa)
+# ======================================================
+
+# 1. Install/Load Library
+if(!require(irr)) install.packages("irr")
+if(!require(dplyr)) install.packages("dplyr")
+library(irr)
+library(dplyr)
+
+# 2. Load Data
+# Ensure "IHC score_for kappa.csv" is in your R working directory
+data <- read.csv("/Users/pichaya/Library/CloudStorage/OneDrive-Personal/Postdoc_HNSCC/Xenium/IHC score_for kappa.csv")
+
+# 3. Rename columns to avoid errors with spaces/parentheses
+colnames(data)[4] <- "Human_Score"
+colnames(data)[5] <- "QuPath_Score"
+
+# 4. Global Analysis (All Markers)
+print("--- GLOBAL RESULTS ---")
+kappa_global <- kappa2(data[, c("Human_Score", "QuPath_Score")], weight = "squared")
+print(paste("Global Weighted Kappa:", round(kappa_global$value, 3)))
+
+# 5. Analysis Per Marker
+print("--- PER MARKER RESULTS ---")
+marker_results <- data %>%
+  group_by(Marker) %>%
+  summarise(
+    N = n(),
+    # Quadratic Weighted Kappa
+    Kappa = kappa2(cbind(Human_Score, QuPath_Score), weight = "squared")$value,
+    # Spearman Correlation (Trend)
+    Correlation = cor(Human_Score, QuPath_Score, method = "spearman"),
+    # Bias (Positive = QuPath is higher; Negative = QuPath is lower)
+    Bias = mean(QuPath_Score - Human_Score)
+  )
+
+# Print as a clean table
+print(as.data.frame(marker_results))
+
+# 6. Save results to file (optional)
+write.csv(marker_results, "/Users/pichaya/Library/CloudStorage/OneDrive-Personal/Postdoc_HNSCC/Xenium/IHC_Kappa_Results.csv", row.names = FALSE)
+```
+
+
+
